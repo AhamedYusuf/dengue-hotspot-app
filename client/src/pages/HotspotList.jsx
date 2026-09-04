@@ -1,29 +1,26 @@
-// client/src/pages/HotspotList.jsx
-// P2 — fetches all reports and displays them as cards.
-//
-// Integration slots for teammates:
-//   - P3: import SearchBar and drop it in where marked below. Simplest wiring
-//     is to lift `reports` into state here and let SearchBar call setReports
-//     with the filtered result from GET /api/reports?search=...
-//   - P4: VerifyButton is rendered inside ReportCard.jsx (see that file).
-
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getReports } from '../api/getReports';
 import ReportCard from '../components/ReportCard';
+import SearchBar from '../components/SearchBar';
 
-// import SearchBar from '../components/SearchBar';
+const SKELETON_COUNT = 6;
 
 export default function HotspotList() {
-  const [reports, setReports] = useState([]);
-  const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+  const [allReports, setAllReports]   = useState([]);
+  const [reports, setReports]         = useState([]);
+  const [status, setStatus]           = useState('loading'); // 'loading' | 'ready' | 'error'
+  const [isSearching, setIsSearching] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isFiltered, setIsFiltered]   = useState(false);
 
+  // Initial fetch
   useEffect(() => {
     let isMounted = true;
 
     getReports()
       .then((data) => {
         if (!isMounted) return;
+        setAllReports(data);
         setReports(data);
         setStatus('ready');
       })
@@ -33,56 +30,116 @@ export default function HotspotList() {
         setStatus('error');
       });
 
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
+  // SearchBar callbacks (stable refs to avoid re-triggering the debounce effect)
+  const handleResults = useCallback((results) => {
+    setReports(results);
+    setIsFiltered(true);
+  }, []);
+
+  const handleClear = useCallback(() => {
+    setReports(allReports);
+    setIsFiltered(false);
+  }, [allReports]);
+
+  const handleLoadingChange = useCallback((loading) => {
+    setIsSearching(loading);
+  }, []);
+
+  // Keep a card's verified state in sync without re-fetching everything
+  const handleReportUpdate = useCallback((updatedReport) => {
+    const merge = (list) =>
+      list.map((r) =>
+        (r._id || r.id) === (updatedReport._id || updatedReport.id)
+          ? { ...r, ...updatedReport }
+          : r
+      );
+    setAllReports((prev) => merge(prev));
+    setReports((prev) => merge(prev));
+  }, []);
+
+  const isLoading = status === 'loading' || isSearching;
+
   return (
-    <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <header className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">
-          Reported hotspots
-        </h2>
+    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+
+      {/* Page header */}
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">
+          Dengue Hotspots
+        </h1>
         <p className="mt-1 text-sm text-slate-500">
-          {status === 'ready' &&
-            `${reports.length} report${reports.length === 1 ? '' : 's'} on record`}
+          {status === 'ready' && !isSearching && (
+            isFiltered
+              ? `${reports.length} result${reports.length === 1 ? '' : 's'} found`
+              : `${reports.length} report${reports.length === 1 ? '' : 's'} on record`
+          )}
+          {isSearching && 'Searching…'}
         </p>
       </header>
 
-      {/* P3: drop <SearchBar onResults={setReports} /> here */}
+      {/* Search */}
+      <div className="mb-8">
+        <SearchBar
+          onResults={handleResults}
+          onClear={handleClear}
+          onLoadingChange={handleLoadingChange}
+        />
+      </div>
 
-      {status === 'loading' && (
-        <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-24 animate-pulse rounded-sm border border-slate-200 bg-slate-50"
+      {/* Loading skeletons */}
+      {isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(SKELETON_COUNT)].map((_, i) => (
+            <div key={i} className="skeleton h-36 rounded-2xl" />
+          ))}
+        </div>
+      )}
+
+      {/* Error state */}
+      {status === 'error' && (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-8 text-center">
+          <span className="text-3xl" aria-hidden="true">⚠️</span>
+          <p className="font-semibold text-red-700">Couldn't load reports</p>
+          <p className="text-sm text-red-500">
+            {errorMessage} — make sure the server is running and{' '}
+            <code className="rounded bg-red-100 px-1 py-0.5 text-xs">VITE_API_URL</code>{' '}
+            is set correctly.
+          </p>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && status === 'ready' && reports.length === 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-100 bg-white p-12 text-center shadow-sm">
+          <span className="text-4xl" aria-hidden="true">
+            {isFiltered ? '🔍' : '📭'}
+          </span>
+          <p className="font-semibold text-slate-700">
+            {isFiltered ? 'No results for that area' : 'No reports yet'}
+          </p>
+          <p className="text-sm text-slate-400">
+            {isFiltered
+              ? 'Try a different search term or clear the filter.'
+              : 'Be the first to submit a dengue hotspot report.'}
+          </p>
+        </div>
+      )}
+
+      {/* Report cards */}
+      {!isLoading && status === 'ready' && reports.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {reports.map((report) => (
+            <ReportCard
+              key={report._id || report.id}
+              report={report}
+              onReportUpdate={handleReportUpdate}
             />
           ))}
         </div>
       )}
-
-      {status === 'error' && (
-        <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Couldn't load reports: {errorMessage}. Check that the server is
-          running and VITE_API_URL is set correctly.
-        </div>
-      )}
-
-      {status === 'ready' && reports.length === 0 && (
-        <div className="rounded-sm border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
-          No reports yet. Once someone submits a report, it'll show up here.
-        </div>
-      )}
-
-      {status === 'ready' && reports.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {reports.map((report) => (
-            <ReportCard key={report._id} report={report} />
-          ))}
-        </div>
-      )}
-    </section>
+    </div>
   );
 }

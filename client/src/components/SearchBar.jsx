@@ -1,60 +1,34 @@
-import { useEffect, useState } from "react";
-import { searchReports } from "../api/searchReports";
+import { useEffect, useState } from 'react';
+import { searchReports } from '../api/searchReports';
 
-const SearchBar = ({
-  onResults,
-  onClear,
-  onLoadingChange,
-}) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [error, setError] = useState("");
+export default function SearchBar({ onResults, onClear, onLoadingChange }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError]           = useState('');
 
   useEffect(() => {
-    // If search box becomes empty,
-    // restore the full report list.
     if (!searchTerm.trim()) {
-      setError("");
-
-      if (onClear) {
-        onClear();
-      }
-
+      setError('');
+      if (onClear) onClear();
       return;
     }
 
-    // Abort old requests if the user types again.
     const controller = new AbortController();
 
-    // Debounce API request by 400ms.
+    // Debounce: 400 ms
     const timer = setTimeout(async () => {
       try {
-        setError("");
+        setError('');
+        if (onLoadingChange) onLoadingChange(true);
 
-        if (onLoadingChange) {
-          onLoadingChange(true);
-        }
-
-        const results = await searchReports(
-          searchTerm,
-          controller.signal
-        );
-
-        if (onResults) {
-          onResults(results);
-        }
+        const results = await searchReports(searchTerm, controller.signal);
+        if (onResults) onResults(results);
       } catch (err) {
-        // Ignore errors caused by aborting an old request.
-        if (err.name !== "AbortError") {
+        if (err.name !== 'AbortError') {
           console.error(err);
-
-          setError(
-            "Unable to search reports. Please try again."
-          );
+          setError('Unable to search reports. Please try again.');
         }
       } finally {
-        if (onLoadingChange) {
-          onLoadingChange(false);
-        }
+        if (onLoadingChange) onLoadingChange(false);
       }
     }, 400);
 
@@ -62,85 +36,54 @@ const SearchBar = ({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [
-    searchTerm,
-    onResults,
-    onClear,
-    onLoadingChange,
-  ]);
+  }, [searchTerm, onResults, onClear, onLoadingChange]);
 
   const handleClear = () => {
-    setSearchTerm("");
-    setError("");
-
-    if (onClear) {
-      onClear();
-    }
+    setSearchTerm('');
+    setError('');
+    if (onClear) onClear();
   };
 
   return (
-    <div className="w-full mb-6">
+    <div className="w-full">
       <div className="relative">
+        {/* Search icon */}
+        <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-slate-400" aria-hidden="true">
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
+          </svg>
+        </span>
+
         <input
+          id="search-input"
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by area e.g. Colombo"
+          placeholder="Search by area — e.g. Colombo, Nugegoda…"
           aria-label="Search dengue reports by area"
-          className="
-            w-full
-            rounded-lg
-            border
-            border-gray-300
-            bg-white
-            px-4
-            py-3
-            pr-20
-            text-gray-900
-            outline-none
-            transition
-            focus:border-red-500
-            focus:ring-2
-            focus:ring-red-200
-          "
+          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-24 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
         />
 
         {searchTerm && (
           <button
             type="button"
+            id="search-clear-btn"
             onClick={handleClear}
-            className="
-              absolute
-              right-3
-              top-1/2
-              -translate-y-1/2
-              rounded-md
-              px-3
-              py-1
-              text-sm
-              text-gray-600
-              hover:bg-gray-100
-            "
+            aria-label="Clear search"
+            className="absolute inset-y-0 right-3 my-auto flex h-7 items-center gap-1 rounded-lg px-2.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
           >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path strokeLinecap="round" d="M18 6 6 18M6 6l12 12" />
+            </svg>
             Clear
           </button>
         )}
       </div>
 
-      <p className="mt-2 text-sm text-gray-500">
-        Search reported dengue hotspots by area.
-      </p>
-
       {error && (
-        <p
-          className="mt-2 text-sm text-red-600"
-          role="alert"
-        >
-          {error}
-        </p>
+        <p className="mt-2 text-xs text-red-600" role="alert">{error}</p>
       )}
     </div>
   );
-};
-
-export default SearchBar;
+}
