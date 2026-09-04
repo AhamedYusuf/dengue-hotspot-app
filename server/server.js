@@ -1,7 +1,8 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const { verifyReport } = require("./routes/verifyReport");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
