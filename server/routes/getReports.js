@@ -1,14 +1,22 @@
-// client/src/api/getReports.js
-// P2 — fetch helper for GET /api/reports
+// server/routes/getReports.js
+// P2 — GET /api/reports: returns all reports, newest first.
 
-const API_URL = import.meta.env.VITE_API_URL;
+const express = require('express');
+const router = express.Router();
+const Report = require('../models/Report');
 
-export async function getReports() {
-  const res = await fetch(`${API_URL}/api/reports`);
+// GET /api/reports
+router.get('/', async (req, res) => {
+  try {
+    const reports = await Report.find()
+      .sort({ date: -1 }) // most recent report date first
+      .select('area date caseCount notes verified createdAt');
 
-  if (!res.ok) {
-    throw new Error('Could not load reports from the server.');
+    res.status(200).json(reports);
+  } catch (err) {
+    console.error('Error fetching reports:', err.message);
+    res.status(500).json({ error: 'Failed to fetch reports. Please try again.' });
   }
+});
 
-  return res.json();
-}
+module.exports = router;
