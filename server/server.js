@@ -1,7 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const { verifyReport } = require("./routes/verifyReport");
 require("dotenv").config();
 
 const app = express();
@@ -12,15 +11,25 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// --- P1's line ---
+// POST /api/reports — create a report
 const createReportRoute = require('./routes/createReport');
 app.use('/api/reports', createReportRoute);
 
-// --- P2's line ---
+// GET /api/reports?search=... — must be mounted BEFORE getReports so its
+// next() fallthrough reaches the plain GET handler below.
+const searchReportsRoute = require('./routes/searchReports');
+app.use('/api/reports', searchReportsRoute);
+
+// GET /api/reports — list all reports
 const getReportsRoute = require('./routes/getReports');
 app.use('/api/reports', getReportsRoute);
 
-// --- teammates add their own app.use('/api/reports', ...) lines here too ---
+// PUT /api/reports/:id — mark a report as verified
+// verifyReport.js exports a plain handler function, so we wrap it in a router.
+const { verifyReport } = require('./routes/verifyReport');
+const verifyRouter = express.Router();
+verifyRouter.put('/:id', verifyReport);
+app.use('/api/reports', verifyRouter);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
