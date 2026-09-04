@@ -12,9 +12,14 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// --- your line ---
+// --- P1's line ---
 const createReportRoute = require('./routes/createReport');
 app.use('/api/reports', createReportRoute);
+
+// --- P2's line ---
+const getReportsRoute = require('./routes/getReports');
+app.use('/api/reports', getReportsRoute);
+
 // --- teammates add their own app.use('/api/reports', ...) lines here too ---
 
 const PORT = process.env.PORT || 5000;
