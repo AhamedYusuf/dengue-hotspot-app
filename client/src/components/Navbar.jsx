@@ -2,13 +2,22 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
 const NAV_LINKS = [
-  { to: '/',          label: 'Home' },
-  { to: '/report',    label: 'Submit Report' },
-  { to: '/hotspots',  label: 'Browse Hotspots' },
+  { to: '/',            label: 'Home' },
+  { to: '/hotspots',   label: 'Hotspots' },
+  { to: '/map',        label: 'Map' },
+  { to: '/dashboard',  label: 'Dashboard' },
+  { to: '/prevention', label: 'Prevention' },
 ];
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const linkClass = ({ isActive }) =>
+    `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+      isActive
+        ? 'bg-blue-500/20 text-blue-200'
+        : 'text-slate-300 hover:bg-white/10 hover:text-white'
+    }`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#1e3a5f]/90 backdrop-blur-md">
@@ -17,10 +26,9 @@ export default function Navbar() {
         {/* Logo */}
         <Link
           to="/"
-          className="flex items-center gap-2 text-white no-underline"
+          className="flex shrink-0 items-center gap-2 text-white no-underline"
           aria-label="DengueWatch home"
         >
-          {/* Mosquito / shield icon */}
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/30 text-lg">
             🦟
           </span>
@@ -30,20 +38,10 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop links */}
-        <ul className="hidden items-center gap-1 sm:flex" role="list">
+        <ul className="hidden items-center gap-0.5 lg:flex" role="list">
           {NAV_LINKS.map(({ to, label }) => (
             <li key={to}>
-              <NavLink
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-blue-500/20 text-blue-200'
-                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                  }`
-                }
-              >
+              <NavLink to={to} end={to === '/'} className={linkClass}>
                 {label}
               </NavLink>
             </li>
@@ -61,7 +59,7 @@ export default function Navbar() {
         {/* Mobile hamburger */}
         <button
           id="mobile-menu-toggle"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 hover:bg-white/10 sm:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 hover:bg-white/10 lg:hidden"
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((prev) => !prev)}
@@ -80,7 +78,7 @@ export default function Navbar() {
 
       {/* Mobile dropdown */}
       {menuOpen && (
-        <div className="border-t border-white/10 bg-[#1e3a5f] px-4 pb-4 sm:hidden">
+        <div className="border-t border-white/10 bg-[#1e3a5f] px-4 pb-4 lg:hidden">
           <ul className="mt-2 flex flex-col gap-1" role="list">
             {NAV_LINKS.map(({ to, label }) => (
               <li key={to}>
@@ -100,6 +98,15 @@ export default function Navbar() {
                 </NavLink>
               </li>
             ))}
+            <li>
+              <Link
+                to="/report"
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-400"
+              >
+                + Report
+              </Link>
+            </li>
           </ul>
         </div>
       )}

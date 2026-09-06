@@ -20,7 +20,7 @@ export default function SearchBar({ onResults, onClear, onLoadingChange }) {
         setError('');
         if (onLoadingChange) onLoadingChange(true);
 
-        const results = await searchReports(searchTerm, controller.signal);
+        const results = await searchReports(searchTerm, {}, controller.signal);
         if (onResults) onResults(results);
       } catch (err) {
         if (err.name !== 'AbortError') {
