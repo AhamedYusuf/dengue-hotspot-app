@@ -1,33 +1,49 @@
-const express = require("express");
+// server/routes/searchReports.js
+// GET /api/reports — supports optional search + filter query params.
+// Falls through to getReports when NO params are present.
+
+const express = require('express');
 const router = express.Router();
+const { listReports } = require('../data/reportStore');
 
-const Report = require("../models/Report");
-
-// GET /api/reports?search=Colombo
-router.get("/", async (req, res, next) => {
+/**
+ * Supported query params (all optional, all backward-compatible):
+ *   ?search=<string>        case-insensitive partial match on area
+ *   ?from=<YYYY-MM-DD>      reports on or after this date
+ *   ?to=<YYYY-MM-DD>        reports on or before this date
+ *   ?verified=true|false
+ *   ?minCases=<number>
+ */
+router.get('/', async (req, res, next) => {
   try {
-    const search = req.query.search?.trim();
+    const { search, from, to, verified, minCases } = req.query;
 
-    // If there is no search query,
-    // let P2's normal GET /api/reports route handle it.
-    if (!search) {
+    // Only skip if ALL params are absent/empty
+    const hasSearch   = typeof search   === 'string' && search.trim() !== '';
+    const hasFrom     = typeof from     === 'string' && from.trim()   !== '';
+    const hasTo       = typeof to       === 'string' && to.trim()     !== '';
+    const hasVerified = verified === 'true' || verified === 'false';
+    const hasMinCases = typeof minCases === 'string' && minCases.trim() !== '' && !isNaN(Number(minCases));
+
+    const hasFilters = hasSearch || hasFrom || hasTo || hasVerified || hasMinCases;
+
+    // No active filters → let getReports handle it (preserves original fallthrough)
+    if (!hasFilters) {
       return next();
     }
 
-    const reports = await Report.find({
-      area: {
-        $regex: search,
-        $options: "i",
-      },
-    }).sort({ createdAt: -1 });
+    const reports = await listReports({
+      search: hasSearch ? search.trim() : undefined,
+      from: hasFrom ? from : undefined,
+      to: hasTo ? to : undefined,
+      verified: hasVerified ? verified === 'true' : undefined,
+      minCases: hasMinCases ? Number(minCases) : undefined,
+    });
 
     res.status(200).json(reports);
   } catch (error) {
-    console.error("Search reports error:", error);
-
-    res.status(500).json({
-      message: "Unable to search reports. Please try again.",
-    });
+    console.error('Search/filter reports error:', error);
+    res.status(500).json({ message: 'Unable to search or filter reports. Please try again.' });
   }
 });
 

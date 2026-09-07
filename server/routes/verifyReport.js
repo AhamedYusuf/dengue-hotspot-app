@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const Report = require("../models/Report");
+const { verifyReport: updateReport } = require('../data/reportStore');
 
 async function verifyReport(req, res) {
     try {
@@ -9,16 +9,11 @@ async function verifyReport(req, res) {
             return res.status(400).json({ message: "Invalid report ID" });
         }
 
-        const report = await Report.findById(id);
-
+        const report = await updateReport(id);
         if (!report) {
             return res.status(404).json({ message: "Report not found" });
         }
-
-        report.verified = true;
-        const updatedReport = await report.save();
-
-        return res.status(200).json(updatedReport);
+        return res.status(200).json(report);
     } catch (error) {
         console.error("Verify report error:", error);
         return res.status(500).json({ message: "Server error while verifying report" });
