@@ -35,7 +35,7 @@ npm install
 \`\`\`
 Create `server/.env`:
 \`\`\`
-MONGO_URI=mongodb+srv://usmanahamed678_db_user:oEgf3FiuUuLiOnAv@cluster0.43fnumy.mongodb.net/?appName=Cluster0
+MONGO_URI=mongodb+srv://<db_user>:<db_password>.43fnumy.mongodb.net/?appName=Cluster0
 PORT=5050
 \`\`\`
 Seed sample data:
