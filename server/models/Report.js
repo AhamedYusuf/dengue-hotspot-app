@@ -28,6 +28,15 @@ const reportSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Feature 1: map view — optional, existing documents stay valid (null)
+  latitude: {
+    type: Number,
+    default: null,
+  },
+  longitude: {
+    type: Number,
+    default: null,
+  },
 }, {
   timestamps: { createdAt: true, updatedAt: false }, // gives us createdAt automatically
 });

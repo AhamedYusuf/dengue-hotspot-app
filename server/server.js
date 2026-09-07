@@ -1,15 +1,31 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const { setMongoReady } = require('./data/reportStore');
 require("dotenv").config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 })
+  .then(() => {
+    setMongoReady(true);
+    console.log('MongoDB connected');
+  })
+  .catch((err) => {
+    setMongoReady(false);
+    console.error('MongoDB connection error; using in-memory report store:', err.message);
+  });
+
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, database: mongoose.connection.readyState === 1 ? 'mongodb' : 'memory' });
+});
+
+// GET /api/reports/analytics — must come FIRST so "analytics" isn't
+// swallowed by the /:id verifyReport router below.
+const analyticsRoute = require('./routes/analytics');
+app.use('/api/reports', analyticsRoute);
 
 // POST /api/reports — create a report
 const createReportRoute = require('./routes/createReport');
