@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
       date,
       caseCount: Number(caseCount),
       notes: notes || '',
-      verified: false,
+      status: 'pending',
       latitude: lat,
       longitude: lng,
     };

@@ -2,11 +2,11 @@ const mongoose = require('mongoose');
 const Report = require('../models/Report');
 
 const fallbackReports = [
-  { area: 'Nugegoda, Colombo', date: new Date('2026-08-20'), caseCount: 14, notes: 'Cluster near the canal area.', verified: true, latitude: 6.8728, longitude: 79.8880 },
-  { area: 'Dehiwala, Colombo', date: new Date('2026-08-22'), caseCount: 6, notes: 'Cases reported in the same neighborhood.', verified: false, latitude: 6.8497, longitude: 79.8654 },
-  { area: 'Kaduwela, Colombo', date: new Date('2026-08-25'), caseCount: 21, notes: 'Sharp rise this week.', verified: true, latitude: 6.9281, longitude: 79.9889 },
-  { area: 'Kandy Town, Kandy', date: new Date('2026-08-18'), caseCount: 9, notes: 'Isolated cases.', verified: false, latitude: 7.2906, longitude: 80.6337 },
-  { area: 'Galle City, Galle', date: new Date('2026-08-30'), caseCount: 52, notes: 'Large outbreak near the old town area.', verified: true, latitude: 6.0535, longitude: 80.2210 },
+  { area: 'Nugegoda, Colombo', date: new Date('2026-08-20'), caseCount: 14, notes: 'Cluster near the canal area.', status: 'verified', verified: true, latitude: 6.8728, longitude: 79.8880 },
+  { area: 'Dehiwala, Colombo', date: new Date('2026-08-22'), caseCount: 6, notes: 'Cases reported in the same neighborhood.', status: 'pending', verified: false, latitude: 6.8497, longitude: 79.8654 },
+  { area: 'Kaduwela, Colombo', date: new Date('2026-08-25'), caseCount: 21, notes: 'Sharp rise this week.', status: 'verified', verified: true, latitude: 6.9281, longitude: 79.9889 },
+  { area: 'Kandy Town, Kandy', date: new Date('2026-08-18'), caseCount: 9, notes: 'Isolated cases.', status: 'pending', verified: false, latitude: 7.2906, longitude: 80.6337 },
+  { area: 'Galle City, Galle', date: new Date('2026-08-30'), caseCount: 52, notes: 'Large outbreak near the old town area.', status: 'verified', verified: true, latitude: 6.0535, longitude: 80.2210 },
 ].map((report) => ({ ...report, _id: new mongoose.Types.ObjectId().toString(), createdAt: new Date() }));
 
 let memoryReports = [...fallbackReports];

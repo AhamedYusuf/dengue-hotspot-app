@@ -1,44 +1,29 @@
-// server/models/Report.js
-// This is the SHARED schema — your team already agreed on this shape.
-// If your friend's dev branch brings its own copy of this file, use theirs
-// and delete this one; it's here so you can run/test your route standalone.
-
 const mongoose = require('mongoose');
 
-const reportSchema = new mongoose.Schema({
-  area: {
-    type: String,
-    required: true,
-    trim: true,
+const ReportSchema = new mongoose.Schema({
+  area: { type: String, required: true, trim: true },
+  date: { type: Date, required: true },
+  caseCount: { type: Number, required: true, min: 0 },
+  notes: { type: String, default: '' },
+  latitude: { type: Number, default: null },
+  longitude: { type: Number, default: null },
+  status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
+  aiRecommendation: {
+    confidence: { type: String, enum: ['low', 'medium', 'high'] },
+    flags: [{ type: String }],
+    reasoning: { type: String },
+    generatedAt: { type: Date },
   },
-  date: {
-    type: Date,
-    required: true,
-  },
-  caseCount: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  notes: {
-    type: String,
-    default: '',
-  },
-  verified: {
-    type: Boolean,
-    default: false,
-  },
-  // Feature 1: map view — optional, existing documents stay valid (null)
-  latitude: {
-    type: Number,
-    default: null,
-  },
-  longitude: {
-    type: Number,
-    default: null,
-  },
-}, {
-  timestamps: { createdAt: true, updatedAt: false }, // gives us createdAt automatically
+  verifiedBy: { type: String },
+  verifiedAt: { type: Date },
+  createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('Report', reportSchema);
+// Backward compatibility: any code reading report.verified still works
+ReportSchema.virtual('verified').get(function () {
+  return this.status === 'verified';
+});
+ReportSchema.set('toJSON', { virtuals: true });
+ReportSchema.set('toObject', { virtuals: true });
+
+module.exports = mongoose.model('Report', ReportSchema);
