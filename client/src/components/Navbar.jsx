@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const NAV_LINKS = [
   { to: '/',            label: 'Home' },
@@ -11,6 +12,14 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isOfficial, email, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    setMenuOpen(false);
+    navigate('/');
+  };
 
   const linkClass = ({ isActive }) =>
     `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -38,7 +47,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop links */}
-        <ul className="hidden items-center gap-0.5 lg:flex" role="list">
+        <ul className="hidden items-center gap-1 lg:flex" role="list">
           {NAV_LINKS.map(({ to, label }) => (
             <li key={to}>
               <NavLink to={to} end={to === '/'} className={linkClass}>
@@ -46,13 +55,47 @@ export default function Navbar() {
               </NavLink>
             </li>
           ))}
+
+          {/* Verification Queue - only when authenticated official */}
+          {isOfficial && (
+            <li>
+              <NavLink to="/queue" className={linkClass}>
+                Verification Queue
+              </NavLink>
+            </li>
+          )}
+
           <li>
             <Link
               to="/report"
-              className="ml-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-400"
+              className="ml-2 rounded-lg bg-blue-500 px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-400"
             >
               + Report
             </Link>
+          </li>
+
+          {/* Official auth state */}
+          <li className="ml-3 pl-3 border-l border-white/20 flex items-center gap-2">
+            {isOfficial ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-blue-200 truncate max-w-[130px]" title={email}>
+                  {email}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/20 hover:text-white"
+                >
+                  Log Out
+                </button>
+              </div>
+            ) : (
+              <NavLink
+                to="/login"
+                className="rounded-lg border border-blue-400/40 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-200 transition hover:bg-blue-500/20 hover:text-white"
+              >
+                Official Portal
+              </NavLink>
+            )}
           </li>
         </ul>
 
@@ -98,14 +141,55 @@ export default function Navbar() {
                 </NavLink>
               </li>
             ))}
+
+            {isOfficial && (
+              <li>
+                <NavLink
+                  to="/queue"
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-blue-500/20 text-blue-200'
+                        : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                    }`
+                  }
+                >
+                  Verification Queue
+                </NavLink>
+              </li>
+            )}
+
             <li>
               <Link
                 to="/report"
                 onClick={() => setMenuOpen(false)}
                 className="block rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-400"
               >
-                + Report
+                + Report Outbreak
               </Link>
+            </li>
+
+            <li className="pt-2 border-t border-white/10">
+              {isOfficial ? (
+                <div className="flex items-center justify-between px-2 py-1">
+                  <span className="text-xs text-blue-200 truncate">{email}</span>
+                  <button
+                    onClick={handleLogout}
+                    className="rounded-lg bg-white/10 px-3 py-1 text-xs text-white hover:bg-white/20"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              ) : (
+                <NavLink
+                  to="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-lg border border-blue-400/30 px-3 py-2 text-center text-sm font-medium text-blue-200 hover:bg-blue-500/20"
+                >
+                  Official Portal Log In
+                </NavLink>
+              )}
             </li>
           </ul>
         </div>

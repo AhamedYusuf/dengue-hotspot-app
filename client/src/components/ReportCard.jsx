@@ -1,5 +1,3 @@
-import VerifyButton from './VerifyButton';
-
 function formatDate(dateStr) {
   if (!dateStr) return null;
   try {
@@ -13,18 +11,48 @@ function formatDate(dateStr) {
   }
 }
 
-export default function ReportCard({ report, onReportUpdate }) {
+function StatusBadge({ status }) {
+  const s = (status || 'pending').toLowerCase();
+  if (s === 'verified') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+        <svg className="h-3 w-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        Verified
+      </span>
+    );
+  }
+  if (s === 'rejected') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 border border-rose-200">
+        <svg className="h-3 w-3 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+        Rejected
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 border border-amber-200">
+      <svg className="h-3 w-3 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+      Pending
+    </span>
+  );
+}
+
+export default function ReportCard({ report }) {
   if (!report) return null;
 
-  const handleVerified = (updatedReport) => {
-    if (typeof onReportUpdate === 'function') onReportUpdate(updatedReport);
-  };
-
+  const currentStatus = report.status || (report.verified ? 'verified' : 'pending');
   const formattedDate = formatDate(report.date);
 
   return (
     <article className="animate-fade-in-up group flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -44,12 +72,8 @@ export default function ReportCard({ report, onReportUpdate }) {
           )}
         </div>
 
-        {/* Verify */}
-        <VerifyButton
-          reportId={report._id || report.id}
-          verified={Boolean(report.verified)}
-          onVerified={handleVerified}
-        />
+        {/* Status Badge */}
+        <StatusBadge status={currentStatus} />
       </div>
 
       {/* Case count badge */}
@@ -62,6 +86,12 @@ export default function ReportCard({ report, onReportUpdate }) {
           </svg>
           {report.caseCount ?? 0} {report.caseCount === 1 ? 'case' : 'cases'}
         </span>
+
+        {report.verifiedBy && (
+          <span className="text-[11px] text-slate-400">
+            Verified by: {report.verifiedBy}
+          </span>
+        )}
       </div>
 
       {/* Notes */}

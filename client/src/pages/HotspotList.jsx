@@ -1,22 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getReports } from '../api/getReports';
+import { searchReports } from '../api/searchReports';
+import FilterBar from '../components/FilterBar';
 import ReportCard from '../components/ReportCard';
 import SearchBar from '../components/SearchBar';
 
 const SKELETON_COUNT = 6;
 
 export default function HotspotList() {
-  const [allReports, setAllReports]   = useState([]);
-  const [reports, setReports]         = useState([]);
-  const [status, setStatus]           = useState('loading'); // 'loading' | 'ready' | 'error'
-  const [isSearching, setIsSearching] = useState(false);
+  const [allReports, setAllReports]     = useState([]);
+  const [reports, setReports]           = useState([]);
+  const [status, setStatus]             = useState('loading');
+  const [isSearching, setIsSearching]   = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isFiltered, setIsFiltered]   = useState(false);
+  const [isFiltered, setIsFiltered]     = useState(false);
 
-  // Initial fetch
+  // Hold the current search term so FilterBar can combine with it
+  const searchTermRef = useRef('');
+  const activeFiltersRef = useRef({});
+
+  // ── Initial fetch ──────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
-
     getReports()
       .then((data) => {
         if (!isMounted) return;
@@ -29,32 +34,97 @@ export default function HotspotList() {
         setErrorMessage(err.message);
         setStatus('error');
       });
-
     return () => { isMounted = false; };
   }, []);
 
-  // SearchBar callbacks (stable refs to avoid re-triggering the debounce effect)
-  const handleResults = useCallback((results) => {
+  // ── Helper: run a search+filter request ───────────────────────
+  async function runSearch(term, filters, signal) {
+    const hasFilters = Object.values(filters).some(Boolean);
+    const hasTerm = term.trim() !== '';
+
+    if (!hasTerm && !hasFilters) return null; // signal caller to restore allReports
+    return searchReports(term, filters, signal);
+  }
+
+  // ── SearchBar callbacks ────────────────────────────────────────
+  const handleSearchResults = useCallback((results) => {
     setReports(results);
     setIsFiltered(true);
   }, []);
 
-  const handleClear = useCallback(() => {
-    setReports(allReports);
-    setIsFiltered(false);
+  const handleSearchClear = useCallback(() => {
+    searchTermRef.current = '';
+    // If filters are still active, re-run with just the filters
+    const hasFilters = Object.values(activeFiltersRef.current).some(Boolean);
+    if (hasFilters) {
+      setIsSearching(true);
+      runSearch('', activeFiltersRef.current, undefined)
+        .then((data) => { setReports(data ?? allReports); })
+        .catch(() => {})
+        .finally(() => setIsSearching(false));
+    } else {
+      setReports(allReports);
+      setIsFiltered(false);
+    }
   }, [allReports]);
 
   const handleLoadingChange = useCallback((loading) => {
     setIsSearching(loading);
   }, []);
 
-  // Keep a card's verified state in sync without re-fetching everything
+  // Intercept searchTerm changes from SearchBar to keep the ref updated
+  // We do this by wrapping onResults
+  const handleSearchResultsWrapped = useCallback((results, term) => {
+    searchTermRef.current = term ?? searchTermRef.current;
+    handleSearchResults(results);
+  }, [handleSearchResults]);
+
+  // ── FilterBar callbacks ────────────────────────────────────────
+  const handleFilterApply = useCallback(async (filters) => {
+    activeFiltersRef.current = filters;
+    const hasFilters = Object.values(filters).some(Boolean);
+    const hasTerm = searchTermRef.current.trim() !== '';
+
+    if (!hasTerm && !hasFilters) {
+      setReports(allReports);
+      setIsFiltered(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const results = await runSearch(searchTermRef.current, filters, undefined);
+      setReports(results ?? allReports);
+      setIsFiltered(true);
+    } catch {
+      // keep current list on error
+    } finally {
+      setIsSearching(false);
+    }
+  }, [allReports]);
+
+  const handleFilterReset = useCallback(() => {
+    activeFiltersRef.current = {};
+    // If there's a search term active, run search with no filters
+    if (searchTermRef.current.trim()) {
+      setIsSearching(true);
+      runSearch(searchTermRef.current, {}, undefined)
+        .then((data) => setReports(data ?? allReports))
+        .catch(() => {})
+        .finally(() => setIsSearching(false));
+    } else {
+      setReports(allReports);
+      setIsFiltered(false);
+    }
+  }, [allReports]);
+
+  // ── Keep verified state synced without a full refetch ─────────
   const handleReportUpdate = useCallback((updatedReport) => {
     const merge = (list) =>
       list.map((r) =>
         (r._id || r.id) === (updatedReport._id || updatedReport.id)
           ? { ...r, ...updatedReport }
-          : r
+          : r,
       );
     setAllReports((prev) => merge(prev));
     setReports((prev) => merge(prev));
@@ -67,9 +137,7 @@ export default function HotspotList() {
 
       {/* Page header */}
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">
-          Dengue Hotspots
-        </h1>
+        <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">Dengue Hotspots</h1>
         <p className="mt-1 text-sm text-slate-500">
           {status === 'ready' && !isSearching && (
             isFiltered
@@ -80,12 +148,17 @@ export default function HotspotList() {
         </p>
       </header>
 
-      {/* Search */}
-      <div className="mb-8">
+      {/* Search + Filter */}
+      <div className="mb-6 flex flex-col gap-3">
         <SearchBar
-          onResults={handleResults}
-          onClear={handleClear}
+          onResults={handleSearchResultsWrapped}
+          onClear={handleSearchClear}
           onLoadingChange={handleLoadingChange}
+        />
+        <FilterBar
+          onApply={handleFilterApply}
+          onReset={handleFilterReset}
+          isFiltered={isFiltered}
         />
       </div>
 
@@ -118,11 +191,11 @@ export default function HotspotList() {
             {isFiltered ? '🔍' : '📭'}
           </span>
           <p className="font-semibold text-slate-700">
-            {isFiltered ? 'No results for that area' : 'No reports yet'}
+            {isFiltered ? 'No results match your filters' : 'No reports yet'}
           </p>
           <p className="text-sm text-slate-400">
             {isFiltered
-              ? 'Try a different search term or clear the filter.'
+              ? 'Try adjusting your search or filters.'
               : 'Be the first to submit a dengue hotspot report.'}
           </p>
         </div>
